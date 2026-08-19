@@ -7,7 +7,15 @@ export function supabaseAdmin() {
   const url = process.env.SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
-  return createClient(url, key, { auth: { persistSession: false } });
+  return createClient(url, key, {
+    auth: { persistSession: false },
+    // Next.js on Vercel caches server-side fetch() calls by default, including
+    // the ones this client makes internally - without this, reads can serve a
+    // stale snapshot from before the most recent write even on a
+    // force-dynamic route, since that setting doesn't reach into fetches made
+    // by third-party clients like this one.
+    global: { fetch: (input, init) => fetch(input, { ...init, cache: 'no-store' }) },
+  });
 }
 
 export type AppointmentStatus = 'pending' | 'confirmed' | 'declined' | 'completed' | 'cancelled';
