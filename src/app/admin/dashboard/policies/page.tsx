@@ -12,6 +12,7 @@ export default function PoliciesManagerPage() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -33,51 +34,78 @@ export default function PoliciesManagerPage() {
 
   async function save(policy: Policy) {
     setSavingId(policy.id);
+    setActionError(null);
     try {
-      await fetch('/api/admin/policies', {
+      const res = await fetch('/api/admin/policies', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id: policy.id, title: policy.title, content: policy.content }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? 'Could not save - try again');
+      }
       setSavedId(policy.id);
       setTimeout(() => setSavedId((cur) => (cur === policy.id ? null : cur)), 1500);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not save - try again');
     } finally {
       setSavingId(null);
     }
   }
 
   async function toggleActive(policy: Policy) {
+    const previous = policy.active;
     updateLocal(policy.id, { active: !policy.active });
-    await fetch('/api/admin/policies', {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id: policy.id, active: !policy.active }),
-    });
+    setActionError(null);
+    try {
+      const res = await fetch('/api/admin/policies', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: policy.id, active: !policy.active }),
+      });
+      if (!res.ok) throw new Error('Could not update - try again');
+    } catch (err) {
+      updateLocal(policy.id, { active: previous });
+      setActionError(err instanceof Error ? err.message : 'Could not update - try again');
+    }
   }
 
   async function move(index: number, delta: number) {
     const target = index + delta;
     if (target < 0 || target >= policies.length) return;
+    const previous = policies;
     const reordered = [...policies];
     [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
     setPolicies(reordered);
-    await fetch('/api/admin/policies/reorder', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ order: reordered.map((p) => p.id) }),
-    });
+    setActionError(null);
+    try {
+      const res = await fetch('/api/admin/policies/reorder', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ order: reordered.map((p) => p.id) }),
+      });
+      if (!res.ok) throw new Error('Could not reorder - try again');
+    } catch (err) {
+      setPolicies(previous);
+      setActionError(err instanceof Error ? err.message : 'Could not reorder - try again');
+    }
   }
 
   async function addPolicy() {
     setAdding(true);
+    setActionError(null);
     try {
       const res = await fetch('/api/admin/policies', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ title: 'New Notice', content: '' }),
       });
-      const data = await res.json();
-      if (res.ok && data.policy) setPolicies((prev) => [...prev, data.policy]);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.policy) throw new Error(data?.error ?? 'Could not add notice - try again');
+      setPolicies((prev) => [...prev, data.policy]);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not add notice - try again');
     } finally {
       setAdding(false);
     }
@@ -86,15 +114,32 @@ export default function PoliciesManagerPage() {
   async function confirmDelete() {
     if (!confirmDeleteId) return;
     const id = confirmDeleteId;
+    const previous = policies;
     setConfirmDeleteId(null);
     setPolicies((prev) => prev.filter((p) => p.id !== id));
-    await fetch(`/api/admin/policies?id=${id}`, { method: 'DELETE' });
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/admin/policies?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Could not delete - try again');
+    } catch (err) {
+      setPolicies(previous);
+      setActionError(err instanceof Error ? err.message : 'Could not delete - try again');
+    }
   }
 
   return (
     <div className="max-w-2xl">
       <h1 className="font-hand text-4xl text-diary-purple">Policies Manager</h1>
       <p className="mt-1 text-sm text-diary-black/60">Every notice is its own item - edits here update the public Notices page immediately.</p>
+
+      {actionError && (
+        <p className="mt-4 rounded-lg border-2 border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}{' '}
+          <button onClick={() => setActionError(null)} className="ml-2 underline">
+            dismiss
+          </button>
+        </p>
+      )}
 
       {loading ? (
         <p className="mt-6 text-sm text-diary-black/50">loading…</p>

@@ -12,6 +12,7 @@ export default function PricingManagerPage() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -33,51 +34,78 @@ export default function PricingManagerPage() {
 
   async function save(item: PricingItem) {
     setSavingId(item.id);
+    setActionError(null);
     try {
-      await fetch('/api/admin/pricing', {
+      const res = await fetch('/api/admin/pricing', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id: item.id, service: item.service, price: item.price, description: item.description }),
       });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error ?? 'Could not save - try again');
+      }
       setSavedId(item.id);
       setTimeout(() => setSavedId((cur) => (cur === item.id ? null : cur)), 1500);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not save - try again');
     } finally {
       setSavingId(null);
     }
   }
 
   async function toggleActive(item: PricingItem) {
+    const previous = item.active;
     updateLocal(item.id, { active: !item.active });
-    await fetch('/api/admin/pricing', {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id: item.id, active: !item.active }),
-    });
+    setActionError(null);
+    try {
+      const res = await fetch('/api/admin/pricing', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: item.id, active: !item.active }),
+      });
+      if (!res.ok) throw new Error('Could not update - try again');
+    } catch (err) {
+      updateLocal(item.id, { active: previous });
+      setActionError(err instanceof Error ? err.message : 'Could not update - try again');
+    }
   }
 
   async function move(index: number, delta: number) {
     const target = index + delta;
     if (target < 0 || target >= items.length) return;
+    const previous = items;
     const reordered = [...items];
     [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
     setItems(reordered);
-    await fetch('/api/admin/pricing/reorder', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ order: reordered.map((it) => it.id) }),
-    });
+    setActionError(null);
+    try {
+      const res = await fetch('/api/admin/pricing/reorder', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ order: reordered.map((it) => it.id) }),
+      });
+      if (!res.ok) throw new Error('Could not reorder - try again');
+    } catch (err) {
+      setItems(previous);
+      setActionError(err instanceof Error ? err.message : 'Could not reorder - try again');
+    }
   }
 
   async function addItem() {
     setAdding(true);
+    setActionError(null);
     try {
       const res = await fetch('/api/admin/pricing', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ service: 'New Service', price: '$0' }),
       });
-      const data = await res.json();
-      if (res.ok && data.item) setItems((prev) => [...prev, data.item]);
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.item) throw new Error(data?.error ?? 'Could not add item - try again');
+      setItems((prev) => [...prev, data.item]);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not add item - try again');
     } finally {
       setAdding(false);
     }
@@ -86,15 +114,32 @@ export default function PricingManagerPage() {
   async function confirmDelete() {
     if (!confirmDeleteId) return;
     const id = confirmDeleteId;
+    const previous = items;
     setConfirmDeleteId(null);
     setItems((prev) => prev.filter((it) => it.id !== id));
-    await fetch(`/api/admin/pricing?id=${id}`, { method: 'DELETE' });
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/admin/pricing?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Could not delete - try again');
+    } catch (err) {
+      setItems(previous);
+      setActionError(err instanceof Error ? err.message : 'Could not delete - try again');
+    }
   }
 
   return (
     <div className="max-w-2xl">
       <h1 className="font-hand text-4xl text-diary-purple">Pricing Manager</h1>
       <p className="mt-1 text-sm text-diary-black/60">Every price is its own item - edits here update the public Price List immediately.</p>
+
+      {actionError && (
+        <p className="mt-4 rounded-lg border-2 border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}{' '}
+          <button onClick={() => setActionError(null)} className="ml-2 underline">
+            dismiss
+          </button>
+        </p>
+      )}
 
       {loading ? (
         <p className="mt-6 text-sm text-diary-black/50">loading…</p>

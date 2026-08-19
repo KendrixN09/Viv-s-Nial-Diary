@@ -13,6 +13,7 @@ export default function PortfolioManagerPage() {
   const [savingId, setSavingId] = useState<string | null>(null);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   function load() {
     setLoading(true);
@@ -75,11 +76,12 @@ export default function PortfolioManagerPage() {
       const uploadData = await uploadRes.json();
       if (!uploadRes.ok) throw new Error(uploadData.error ?? 'Upload failed');
 
-      await fetch('/api/admin/portfolio', {
+      const replaceRes = await fetch('/api/admin/portfolio', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id, image_url: uploadData.url }),
       });
+      if (!replaceRes.ok) throw new Error('Uploaded the photo but could not save it to this slot - try again');
       load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong');
@@ -90,47 +92,76 @@ export default function PortfolioManagerPage() {
 
   async function saveAltText(img: PortfolioImage) {
     setSavingId(img.id);
+    setActionError(null);
     try {
-      await fetch('/api/admin/portfolio', {
+      const res = await fetch('/api/admin/portfolio', {
         method: 'PATCH',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ id: img.id, alt_text: img.alt_text }),
       });
+      if (!res.ok) throw new Error('Could not save - try again');
       setSavedId(img.id);
       setTimeout(() => setSavedId((cur) => (cur === img.id ? null : cur)), 1500);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Could not save - try again');
     } finally {
       setSavingId(null);
     }
   }
 
   async function toggleActive(id: string, active: boolean) {
+    const img = images.find((i) => i.id === id);
+    const previous = img?.active ?? !active;
     updateLocal(id, { active });
-    await fetch('/api/admin/portfolio', {
-      method: 'PATCH',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ id, active }),
-    });
+    setActionError(null);
+    try {
+      const res = await fetch('/api/admin/portfolio', {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, active }),
+      });
+      if (!res.ok) throw new Error('Could not update - try again');
+    } catch (err) {
+      updateLocal(id, { active: previous });
+      setActionError(err instanceof Error ? err.message : 'Could not update - try again');
+    }
   }
 
   async function confirmDelete() {
     if (!confirmDeleteId) return;
     const id = confirmDeleteId;
+    const previous = images;
     setConfirmDeleteId(null);
     setImages((prev) => prev.filter((img) => img.id !== id));
-    await fetch(`/api/admin/portfolio?id=${id}`, { method: 'DELETE' });
+    setActionError(null);
+    try {
+      const res = await fetch(`/api/admin/portfolio?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Could not delete - try again');
+    } catch (err) {
+      setImages(previous);
+      setActionError(err instanceof Error ? err.message : 'Could not delete - try again');
+    }
   }
 
   async function move(index: number, delta: number) {
     const target = index + delta;
     if (target < 0 || target >= images.length) return;
+    const previous = images;
     const reordered = [...images];
     [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
     setImages(reordered);
-    await fetch('/api/admin/portfolio/reorder', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ order: reordered.map((img) => img.id) }),
-    });
+    setActionError(null);
+    try {
+      const res = await fetch('/api/admin/portfolio/reorder', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ order: reordered.map((img) => img.id) }),
+      });
+      if (!res.ok) throw new Error('Could not reorder - try again');
+    } catch (err) {
+      setImages(previous);
+      setActionError(err instanceof Error ? err.message : 'Could not reorder - try again');
+    }
   }
 
   return (
@@ -141,6 +172,14 @@ export default function PortfolioManagerPage() {
         scrapbook styling on the public page are unaffected by anything here.
       </p>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {actionError && (
+        <p className="mt-2 rounded-lg border-2 border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}{' '}
+          <button onClick={() => setActionError(null)} className="ml-2 underline">
+            dismiss
+          </button>
+        </p>
+      )}
 
       <div className="mt-5 rounded-xl border-2 border-diary-black/15 bg-white p-4">
         <h2 className="font-display text-sm text-diary-black">Add a new photo</h2>
@@ -170,7 +209,7 @@ export default function PortfolioManagerPage() {
 
       {loading ? (
         <p className="mt-6 text-sm text-diary-black/50">loading…</p>
-      ) : error ? null : images.length === 0 ? (
+      ) : images.length === 0 ? (
         <p className="mt-6 text-sm text-diary-black/50">No photos yet - add your first one above ✧</p>
       ) : (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
