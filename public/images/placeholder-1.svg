@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <radialGradient id="g1" cx="50%" cy="30%" r="80%">
+      <stop offset="0%" stop-color="#fff3c4"/>
+      <stop offset="100%" stop-color="#f5c518"/>
+    </radialGradient>
+  </defs>
+  <rect width="300" height="300" fill="url(#g1)"/>
+  <g opacity="0.5" stroke="#c99a00" stroke-width="2" fill="none">
+    <path d="M20 40 q30 -20 60 0" /><path d="M220 30 q30 -15 55 5" />
+    <path d="M10 260 q30 20 60 0" /><path d="M230 250 q25 18 55 0" />
+  </g>
+  <circle cx="150" cy="150" r="46" fill="#2b1a05"/>
+  <path d="M104 150 a46 46 0 0 1 92 0 Z" fill="#f5c518" opacity="0.9"/>
+  <rect x="104" y="140" width="92" height="8" fill="#2b1a05"/>
+  <rect x="104" y="158" width="92" height="8" fill="#2b1a05"/>
+  <circle cx="130" cy="130" r="6" fill="#fff"/>
+  <circle cx="170" cy="130" r="6" fill="#fff"/>
+  <text x="150" y="240" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#5a3d00">bee French tip set</text>
+  <text x="150" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#8a6a20">upload the real photo in Admin</text>
+</svg>

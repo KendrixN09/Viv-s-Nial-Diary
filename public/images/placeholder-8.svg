@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <rect width="300" height="300" fill="#fafafa"/>
+  <circle cx="45" cy="45" r="24" fill="#e0c9ff"/>
+  <text x="90" y="40" font-family="Georgia, serif" font-size="14" fill="#333">75 photos</text>
+  <text x="90" y="58" font-family="Georgia, serif" font-size="12" fill="#777">141 followers · 92 following</text>
+  <rect x="20" y="90" width="80" height="80" fill="#ffd6ee"/>
+  <rect x="110" y="90" width="80" height="80" fill="#d6f0ff"/>
+  <rect x="200" y="90" width="80" height="80" fill="#e0c9ff"/>
+  <text x="150" y="230" text-anchor="middle" font-family="Georgia, serif" font-size="15" fill="#444">old-Instagram aesthetic snapshot</text>
+  <text x="150" y="252" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#999">upload the real photo in Admin</text>
+</svg>

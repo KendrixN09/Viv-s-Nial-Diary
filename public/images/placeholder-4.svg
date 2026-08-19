@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300">
+  <defs>
+    <radialGradient id="g4" cx="50%" cy="35%" r="75%">
+      <stop offset="0%" stop-color="#ffe9f2"/><stop offset="100%" stop-color="#ff8fc2"/>
+    </radialGradient>
+  </defs>
+  <rect width="300" height="300" fill="url(#g4)"/>
+  <g fill="#ffc2de" opacity="0.7">
+    <circle cx="70" cy="70" r="10"/><circle cx="86" cy="58" r="10"/><circle cx="90" cy="82" r="10"/>
+    <circle cx="220" cy="200" r="10"/><circle cx="236" cy="188" r="10"/><circle cx="240" cy="212" r="10"/>
+  </g>
+  <text x="150" y="160" text-anchor="middle" font-family="Georgia, serif" font-size="16" fill="#7a1450">cherry blossom French tips</text>
+  <text x="150" y="248" text-anchor="middle" font-family="Georgia, serif" font-size="11" fill="#a13a70">upload the real photo in Admin</text>
+</svg>
